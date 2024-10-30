@@ -6,18 +6,19 @@
     key_to_copy: "DiscoveryClientFTP"
 
   tasks:
-    - name: Parse the source XML file and extract the key value
-      xml:
-        path: "{{ source_config_file }}"
-        xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']/@value"
-        content: attribute
-      register: source_key_value
+- name: Parse the source XML file and extract the key value
+  community.general.xml:
+    path: "{{ source_config_file }}"
+    xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']/@value"
+    content: attribute
+  register: source_key_value
 
-    - name: Insert or update the key in the destination XML file
-      xml:
-        path: "{{ target_config_file }}"
-        xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']"
-        attribute:
-          key: "{{ key_to_copy }}"
-          value: "{{ source_key_value.matches[0].value }}"
+- name: Insert or update the key in the destination XML file
+  community.general.xml:
+    path: "{{ target_config_file }}"
+    xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']"
+    attribute:
+      key: "{{ key_to_copy }}"
+      value: "{{ source_key_value.matches[0].value }}"
+    state: present
         state: present
