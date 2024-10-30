@@ -1,56 +1,28 @@
 ---
-  - name: Copy specific XML configuration key from source to destination on Windows
+  - name: Copy .NET config variables from one file to another on Windows
     hosts: windows
-    vars:
-      source_config_file: "D:\\trident\\trident04config.config"   # Full path to source file
-      target_config_file: "D:\\artifact\\artifactconfig.config"  # Full path to target file
-      key_to_copy: "DiscoveryClientFTP"
+    gather_facts: false
     tasks:
-      - name: Read the source configuration file with PowerShell
-        win_shell: |
-          Get-Content -Path "{{ source_config_file }}" | Out-String
-        register: source_content
+      - name: Read specific variable from source config file
+        win_shell: Select-String -Path "D:\\trident\\trident04config.config" -Pattern '<add key="DiscoveryClientFTP"'
+        register: discovery_client_ftp_line
   
-      - name: Debug - Show the raw content of the source file
-        debug:
-          var: source_content.stdout
+      - name: Check if variable was found in source config
+        fail:
+          msg: "The key 'DiscoveryClientFTP' was not found in the source config file."
+        when: discovery_client_ftp_line.stdout == ""
   
-      - name: Extract the value of the key from the source content
-        set_fact:
-          extracted_value: "{{ source_content.stdout | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
-      
-      - name: Debug - Show the extracted value
-        debug:
-          msg: "Extracted value for {{ key_to_copy }}: {{ extracted_value }}"
-  
-      - name: Ensure target file exists
-        win_copy:
-          content: ""
-          dest: "{{ target_config_file }}"
-          force: no
-  
-      - name: Debug - Show the initial content of the target file
-        win_shell: |
-          Get-Content -Path "{{ target_config_file }}" | Out-String
-        register: target_content_before
-  
-      - name: Debug - Display target file content before modification
-        debug:
-          var: target_content_before.stdout
-  
-      - name: Insert or update the key-value pair in the target config file
+      - name: Copy variable to destination config file
         win_lineinfile:
-          path: "{{ target_config_file }}"
-          regexp: '<add key="{{ key_to_copy }}" value=".*" />'
-          line: '<add key="{{ key_to_copy }}" value="{{ extracted_value }}" />'
-          create: yes
+          path: "C:\\artifact\\artifactconfig.config"
+          regexp: '<add key="DiscoveryClientFTP".*'
+          line: "{{ discovery_client_ftp_line.stdout }}"
+          state: present
   
-      - name: Debug - Show the modified content of the target file
-        win_shell: |
-          Get-Content -Path "{{ target_config_file }}" | Out-String
-        register: target_content_after
+      - name: Verify changes in destination file
+        win_shell: Get-Content -Path "C:\\artifact\\artifactconfig.config"
+        register: destination_config_content
   
-      - name: Debug - Display target file content after modification
-        debug:
-          var: target_content_after.stdout
+      - debug:
+          var: destination_config_content.stdout_lines
   
