@@ -1,47 +1,28 @@
 ---
-- name: Replace specific values in destination config file on Windows
+- name: Replace value for dtIndexesBasePath in destination config file on Windows
   hosts: windows
   gather_facts: false
   tasks:
-    - name: Define keys to update
-      set_fact:
-        keys_to_update:
-          - DiscoveryClientFTP
-          - dtIndexesBasePath
-
-    - name: Read specific key-value pairs from source config file
+    - name: Extract value from source config file
       win_shell: |
-        $pairs = @()
-        foreach ($key in '{{ keys_to_update }}') {
-          $value = Get-Content "C:\\path\\to\\source.config" | Select-String -Pattern "<add key=`"$key`" value=`"(.*?)`"" | ForEach-Object { $_.Matches.Groups[1].Value }
-          if ($value) {
-            $pairs += [PSCustomObject]@{ Key = $key; Value = $value }
-          }
-        }
-        # Output as a list of JSON objects for Ansible
-        $pairs | ConvertTo-Json
-      register: specific_key_value_pairs
+        Select-String -Path "D:\\trident\\trident04config.config" -Pattern '<add key="dtIndexesBasePath" value="(.*?)"' | ForEach-Object { $_.Matches.Groups[1].Value }
+      register: discovery_client_ftp_value
 
-    - name: Convert JSON output to list of dictionaries
-      set_fact:
-        specific_key_value_pairs_list: "{{ specific_key_value_pairs.stdout | from_json }}"
-
-    - name: Check if specific key-value pairs were found in source config
+    - name: Check if dtIndexesBasePath value was found in source config
       fail:
-        msg: "No specific key-value pairs found in the source config file."
-      when: specific_key_value_pairs_list | length == 0
+        msg: "The key 'dtIndexesBasePath' was not found in the source config file."
+      when: discovery_client_ftp_value.stdout == ""
 
-    - name: Replace values for specific keys in destination config
+    - name: Replace value for dtIndexesBasePath in destination config
       win_lineinfile:
-        path: "C:\\path\\to\\destination.config"
-        regexp: '(?<=<add key="{{ item.Key }}" value=")[^"]*'
-        line: "{{ item.Value }}"
+        path: "D:\\artifact\\artifactconfig.config"
+        regexp: '(?<=<add key="dtIndexesBasePath" value=")[^"]*'
+        line: "{{ discovery_client_ftp_value.stdout }}"
         backrefs: yes
         state: present
-      loop: "{{ specific_key_value_pairs_list }}"
 
     - name: Verify changes in destination file
-      win_shell: Get-Content -Path "C:\\path\\to\\destination.config"
+      win_shell: Get-Content -Path "D:\\artifact\\artifactconfig.config"
       register: destination_config_content
 
     - debug:
