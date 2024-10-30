@@ -1,0 +1,32 @@
+---
+- name: Replace multiple values in destination config file on Windows
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: Read all key-value pairs from source config file
+      win_shell: |
+        Get-Content "D:\\trident\\trident04config.config" | Select-String -Pattern '<add key="(.*?)" value="(.*?)"' | ForEach-Object {
+          [PSCustomObject]@{ Key = $_.Matches.Groups[1].Value; Value = $_.Matches.Groups[2].Value }
+        }
+      register: key_value_pairs
+
+    - name: Check if key-value pairs were found in source config
+      fail:
+        msg: "No key-value pairs found in the source config file."
+      when: key_value_pairs.stdout == ""
+
+    - name: Replace values for each key in destination config
+      win_lineinfile:
+        path: "D:\\artifact\\artifactconfig.config"
+        regexp: '(?<=<add key="{{ item.Key }}" value=")[^"]*'
+        line: "{{ item.Value }}"
+        backrefs: yes
+        state: present
+      loop: "{{ key_value_pairs }}"
+
+    - name: Verify changes in destination file
+      win_shell: Get-Content -Path "D:\\artifact\\artifactconfig.config"
+      register: destination_config_content
+
+    - debug:
+        var: destination_config_content.stdout_lines
