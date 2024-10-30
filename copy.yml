@@ -2,8 +2,8 @@
   - name: Copy specific XML configuration key from source to destination on Windows
     hosts: windows
     vars:
-      source_config_file: "D:\\trident\\source.config"   # Full path to source file
-      target_config_file: "D:\\artifact\\target.config"  # Full path to target file
+      source_config_file: "D:\\trident\\trident04config.config"   # Full path to source file
+      target_config_file: "D:\\artifact\\artifactconfig.config"  # Full path to target file
       key_to_copy: "DiscoveryClientFTP"
     tasks:
     - name: Read the source configuration file with PowerShell
