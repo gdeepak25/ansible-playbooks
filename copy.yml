@@ -11,9 +11,17 @@
           Get-Content -Path "{{ source_config_file }}" | Out-String
         register: source_content
   
+      - name: Debug - Show the raw content of the source file
+        debug:
+          var: source_content.stdout
+  
       - name: Extract the value of the key from the source content
         set_fact:
           extracted_value: "{{ source_content.stdout | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
+      
+      - name: Debug - Show the extracted value
+        debug:
+          msg: "Extracted value for {{ key_to_copy }}: {{ extracted_value }}"
   
       - name: Ensure target file exists
         win_copy:
@@ -21,9 +29,28 @@
           dest: "{{ target_config_file }}"
           force: no
   
+      - name: Debug - Show the initial content of the target file
+        win_shell: |
+          Get-Content -Path "{{ target_config_file }}" | Out-String
+        register: target_content_before
+  
+      - name: Debug - Display target file content before modification
+        debug:
+          var: target_content_before.stdout
+  
       - name: Insert or update the key-value pair in the target config file
         win_lineinfile:
           path: "{{ target_config_file }}"
           regexp: '<add key="{{ key_to_copy }}" value=".*" />'
           line: '<add key="{{ key_to_copy }}" value="{{ extracted_value }}" />'
-          create: yes  
+          create: yes
+  
+      - name: Debug - Show the modified content of the target file
+        win_shell: |
+          Get-Content -Path "{{ target_config_file }}" | Out-String
+        register: target_content_after
+  
+      - name: Debug - Display target file content after modification
+        debug:
+          var: target_content_after.stdout
+  
