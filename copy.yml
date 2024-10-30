@@ -1,19 +1,19 @@
 ---
   - name: Copy specific XML configuration key from source to destination on Windows
-    hosts: windows_target
+    hosts: windows
     vars:
-      source_config_file: "D:\\trident\\trident04config.config"   # Full path to source file
-      target_config_file: "D:\\artifact\\artifactconfig.config"  # Full path to target file
+      source_config_file: "D:\\trident\\source.config"   # Full path to source file
+      target_config_file: "D:\\artifact\\target.config"  # Full path to target file
       key_to_copy: "DiscoveryClientFTP"
     tasks:
-    - name: Read the source configuration file
-      win_slurp:
-        src: "{{ source_config_file }}"
+    - name: Read the source configuration file with PowerShell
+      win_shell: |
+      Get-Content -Path "{{ source_config_file }}" | Out-String
       register: source_content
   
     - name: Extract the value of the key from the source content
       set_fact:
-        extracted_value: "{{ source_content['content'] | b64decode | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
+        extracted_value: "{{ source_content.stdout | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
   
     - name: Ensure target file exists
       win_copy:
