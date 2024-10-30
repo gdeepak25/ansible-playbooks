@@ -6,13 +6,14 @@
     - name: Define keys to update
       set_fact:
         keys_to_update:
-          - DiscoveryClientFTP
-          - dtIndexesBasePath
+          - BulkDownloadFolder 
+          - DiscoveryClientmUploadDir 
 
     - name: Read specific key-value pairs from source config file
       win_shell: |
+        $keys = '{{ keys_to_update | to_json }}' | ConvertFrom-Json
         $pairs = @()
-        foreach ($key in '{{ keys_to_update }}') {
+        foreach ($key in $keys) {
           $value = Get-Content "D:\\trident\\trident04config.config" | Select-String -Pattern "<add key=`"$key`" value=`"(.*?)`"" | ForEach-Object { $_.Matches.Groups[1].Value }
           if ($value) {
             $pairs += [PSCustomObject]@{ Key = $key; Value = $value }
