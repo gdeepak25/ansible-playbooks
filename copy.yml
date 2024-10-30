@@ -1,23 +1,29 @@
-- name: Copy specific XML configuration key from source to destination
-  hosts: windows
-  vars:
-    source_config_file: "D:\trident"
-    target_config_file: "D:\artifact"
-    key_to_copy: "DiscoveryClientFTP"
-
-  tasks:
-- name: Parse the source XML file and extract the key value
-  community.general.xml:
-    path: "{{ source_config_file }}"
-    xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']/@value"
-    content: attribute
-  register: source_key_value
-
-- name: Insert or update the key in the destination XML file
-  community.general.xml:
-    path: "{{ target_config_file }}"
-    xpath: "/configuration/appSettings/add[@key='{{ key_to_copy }}']"
-    attribute:
-      key: "{{ key_to_copy }}"
-      value: "{{ source_key_value.matches[0].value }}"
-    state: present
+---
+  - name: Copy specific XML configuration key from source to destination
+    hosts: windows
+    vars:
+      source_config_file: "D:\\trident"
+      target_config_file: "D:\\artifact"
+      key_to_copy: "DiscoveryClientFTP"
+    tasks:
+    - name: Read the source configuration file
+      slurp:
+        src: "{{ source_config_file }}"
+        register: source_content
+  
+    - name: Extract the value of the key from the source content
+      set_fact:
+        extracted_value: "{{ source_content['content'] | b64decode | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
+  
+    - name: Ensure target file exists
+      copy:
+        content: ""
+        dest: "{{ target_config_file }}"
+        force: no
+  
+    - name: Insert or update the key-value pair in the target config file
+      lineinfile:
+        path: "{{ target_config_file }}"
+        regexp: '<add key="{{ key_to_copy }}" value=".*" />'
+        line: '<add key="{{ key_to_copy }}" value="{{ extracted_value }}" />'
+        create: yes  
