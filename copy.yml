@@ -1,4 +1,3 @@
----
 - name: Copy specific XML configuration key from source to destination
   hosts: target_server
   vars:
