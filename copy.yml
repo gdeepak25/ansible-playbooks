@@ -21,4 +21,3 @@
       key: "{{ key_to_copy }}"
       value: "{{ source_key_value.matches[0].value }}"
     state: present
-        state: present
