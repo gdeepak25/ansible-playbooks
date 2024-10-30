@@ -4,7 +4,8 @@
     gather_facts: false
     tasks:
       - name: Extract value from source config file
-        win_shell: Select-String -Path "D:\\trident\\trident04config.config" -Pattern '<add key="DiscoveryClientFTP" value="(.*?)"'
+        win_shell: |
+          Select-String -Path "C:\\trident\\trident04config.config" -Pattern '<add key="DiscoveryClientFTP" value="(.*?)"' | ForEach-Object { $_.Matches.Groups[1].Value }
         register: discovery_client_ftp_value
   
       - name: Check if DiscoveryClientFTP value was found in source config
@@ -12,20 +13,16 @@
           msg: "The key 'DiscoveryClientFTP' was not found in the source config file."
         when: discovery_client_ftp_value.stdout == ""
   
-      - name: Parse the extracted value
-        set_fact:
-          new_value: "{{ discovery_client_ftp_value.stdout | regex_search('value=\"(.*?)\"') | first }}"
-  
       - name: Replace value for DiscoveryClientFTP in destination config
         win_lineinfile:
-          path: "D:\\artifact\\artifactconfig.config"
+          path: "C:\\artifact\\artifactconfig.config"
           regexp: '(?<=<add key="DiscoveryClientFTP" value=")[^"]*'
-          line: "{{ new_value }}"
+          line: "{{ discovery_client_ftp_value.stdout }}"
           backrefs: yes
           state: present
   
       - name: Verify changes in destination file
-        win_shell: Get-Content -Path "D:\\artifact\\artifactconfig.config"
+        win_shell: Get-Content -Path "C:\\artifact\\artifactconfig.config"
         register: destination_config_content
   
       - debug:
