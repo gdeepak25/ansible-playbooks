@@ -1,29 +1,30 @@
 ---
-  - name: Copy specific XML configuration key from source to destination
-    hosts: windows
+  - name: Copy specific XML configuration key from source to destination on Windows
+    hosts: windows_target
     vars:
-      source_config_file: "D:\\trident"
-      target_config_file: "D:\\artifact"
+      source_config_file: "D:\\trident\\trident04config.config"   # Full path to source file
+      target_config_file: "D:\\artifact\\artifactconfig.config"  # Full path to target file
       key_to_copy: "DiscoveryClientFTP"
     tasks:
-    - name: Read the source configuration file
-      slurp:
-        src: "{{ source_config_file }}"
+      - name: Read the source configuration file
+        win_slurp:
+          src: "{{ source_config_file }}"
         register: source_content
   
-    - name: Extract the value of the key from the source content
-      set_fact:
-        extracted_value: "{{ source_content['content'] | b64decode | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
+      - name: Extract the value of the key from the source content
+        set_fact:
+          extracted_value: "{{ source_content['content'] | b64decode | regex_search('<add key=\"' + key_to_copy + '\" value=\"([^\"]+)\"', '\\1') }}"
   
-    - name: Ensure target file exists
-      copy:
-        content: ""
-        dest: "{{ target_config_file }}"
-        force: no
+      - name: Ensure target file exists
+        win_copy:
+          content: ""
+          dest: "{{ target_config_file }}"
+          force: no
   
-    - name: Insert or update the key-value pair in the target config file
-      lineinfile:
-        path: "{{ target_config_file }}"
-        regexp: '<add key="{{ key_to_copy }}" value=".*" />'
-        line: '<add key="{{ key_to_copy }}" value="{{ extracted_value }}" />'
-        create: yes  
+      - name: Insert or update the key-value pair in the target config file
+        win_lineinfile:
+          path: "{{ target_config_file }}"
+          regexp: '<add key="{{ key_to_copy }}" value=".*" />'
+          line: '<add key="{{ key_to_copy }}" value="{{ extracted_value }}" />'
+          create: yes
+  
