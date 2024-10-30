@@ -1,22 +1,27 @@
 ---
-  - name: Copy .NET config variables from one file to another on Windows
+  - name: Replace value for DiscoveryClientFTP in destination config file on Windows
     hosts: windows
     gather_facts: false
     tasks:
-      - name: Read specific variable from source config file
-        win_shell: Select-String -Path "D:\\trident\\trident04config.config" -Pattern '<add key="DiscoveryClientFTP"'
-        register: discovery_client_ftp_line
+      - name: Extract value from source config file
+        win_shell: Select-String -Path "D:\\trident\\trident04config.config" -Pattern '<add key="DiscoveryClientFTP" value="(.*?)"'
+        register: discovery_client_ftp_value
   
-      - name: Check if variable was found in source config
+      - name: Check if DiscoveryClientFTP value was found in source config
         fail:
           msg: "The key 'DiscoveryClientFTP' was not found in the source config file."
-        when: discovery_client_ftp_line.stdout == ""
+        when: discovery_client_ftp_value.stdout == ""
   
-      - name: Copy variable to destination config file
+      - name: Parse the extracted value
+        set_fact:
+          new_value: "{{ discovery_client_ftp_value.stdout | regex_search('value=\"(.*?)\"') | first }}"
+  
+      - name: Replace value for DiscoveryClientFTP in destination config
         win_lineinfile:
           path: "D:\\artifact\\artifactconfig.config"
-          regexp: '<add key="DiscoveryClientFTP".*'
-          line: "{{ discovery_client_ftp_line.stdout }}"
+          regexp: '(?<=<add key="DiscoveryClientFTP" value=")[^"]*'
+          line: "{{ new_value }}"
+          backrefs: yes
           state: present
   
       - name: Verify changes in destination file
